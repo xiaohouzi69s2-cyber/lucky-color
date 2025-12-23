@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>每日五行生肖穿衣指南</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+  
+  <style>
+    /* CSS 样式部分 (对应你的 wxss) */
+    body { margin: 0; padding: 0; background-color: #f8f9fc; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .container { padding: 12px; min-height: 100vh; box-sizing: border-box; max-width: 600px; margin: 0 auto; }
+    
+    .dashboard-header { text-align: center; margin-bottom: 15px; }
+    .date-chip { display: inline-block; font-size: 13px; color: #666; background: #fff; padding: 4px 10px; border-radius: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 6px; }
+    .energy-chip { font-size: 16px; font-weight: bold; color: #333; }
+
+    /* 网格系统 */
+    .zodiac-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
+
+    /* 卡片样式 */
+    .grid-item {
+      background: #fff; border-radius: 8px; height: 100px; padding: 8px 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03); overflow: hidden;
+    }
+
+    .item-head { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+    .icon { font-size: 16px; }
+    .name { font-size: 13px; color: #555; font-weight: bold; }
+
+    .item-body { display: flex; align-items: center; gap: 3px; margin-bottom: 8px; }
+    .yi-char { font-size: 11px; padding: 1px 3px; border: 1px solid; border-radius: 3px; font-weight: bold; }
+    .color-font { font-size: 16px; font-weight: 800; white-space: nowrap; }
+
+    .item-foot { width: 100%; text-align: center; }
+    .reason-text { font-size: 11px; color: #333; background: rgba(255,255,255,0.6); padding: 2px 6px; border-radius: 5px; font-weight: 500; }
+
+    .footer-tips { text-align: center; margin-top: 25px; font-size: 11px; color: #ccc; padding-bottom: 20px;}
+  </style>
+</head>
+<body>
+
+  <div id="app" class="container">
+    <div class="dashboard-header">
+      <div class="date-chip">{{currentDate}} {{lunarInfo}}</div>
+      <div class="energy-chip">今日能量：{{nayin}}</div>
+    </div>
+
+    <div class="zodiac-grid">
+      <div v-for="(item, index) in zodiacGrid" :key="index" class="grid-item" 
+           :style="{ background: item.bgColor, borderBottom: '3px solid ' + item.themeColor }">
+        
+        <div class="item-head">
+          <span class="icon">{{item.icon}}</span>
+          <span class="name">{{item.name}}</span>
+        </div>
+
+        <div class="item-body">
+          <span class="yi-char" :style="{ borderColor: item.themeColor, color: item.themeColor }">宜</span>
+          <span class="color-font" :style="{ color: item.themeColor }">{{item.mainColor}}</span>
+        </div>
+
+        <div class="item-foot">
+          <span class="reason-text">💡{{item.reason}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-tips">每日根据干支五行精准定制</div>
+  </div>
+
+  <script>
+    // 逻辑部分 (对应你的 JS)
+    new Vue({
+      el: '#app',
+      data: {
+        currentDate: '',
+        lunarInfo: '',
+        nayin: '',
+        zodiacGrid: []
+      },
+      mounted() {
+        this.initData();
+      },
+      methods: {
+        initData() {
+          try {
+            // 这里直接使用全局的 Lunar 类
+            const date = new Date();
+            const solar = Solar.fromDate(date);
+            const lunar = solar.getLunar();
+            const eightChar = lunar.getEightChar();
+
+            let dayWuXing = '土';
+            const naYinStr = eightChar.getDayNaYin();
+            if (naYinStr) dayWuXing = naYinStr.charAt(naYinStr.length - 1);
+
+            const list = this.generatePrecisionAdvice(dayWuXing);
+
+            // 更新数据
+            const weeks = ['日','一','二','三','四','五','六'];
+            this.currentDate = `${solar.getMonth()}月${solar.getDay()}日 星期${weeks[date.getDay()]}`;
+            this.lunarInfo = `农历${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
+            this.nayin = `${naYinStr}日 (五行属${dayWuXing})`;
+            this.zodiacGrid = list;
+
+          } catch (e) {
+            console.error(e);
+          }
+        },
+        generatePrecisionAdvice(dayEle) {
+          // 数据常量
+          const VARIATION_DB = {
+            '木': ['森林绿', '薄荷绿', '青碧色', '墨绿色', '翡翠色', '橄榄绿'],
+            '火': ['中国红', '紫罗兰', '珊瑚橙', '酒红色', '樱花粉', '朱砂红'],
+            '土': ['大地黄', '卡其色', '深棕色', '米杏色', '焦糖色', '驼色'],
+            '金': ['珍珠白', '流光银', '香槟金', '浅灰色', '米白色', '钛金色'],
+            '水': ['深邃黑', '藏青色', '宝蓝色', '烟灰色', '墨蓝色', '黛蓝色']
+          };
+          const STYLE_MAP = {
+            '木': { hex: '#67c23a', bg: '#f0f9eb' },
+            '火': { hex: '#f56c6c', bg: '#fef0f0' },
+            '土': { hex: '#e6a23c', bg: '#fdf6ec' },
+            '金': { hex: '#909399', bg: '#f4f4f5' },
+            '水': { hex: '#409eff', bg: '#ecf5ff' }
+          };
+          const ZODIAC_DATA = [
+            { name: '鼠', ele: '水', icon: '🐭' }, { name: '牛', ele: '土', icon: '🐮' },
+            { name: '虎', ele: '木', icon: '🐯' }, { name: '兔', ele: '木', icon: '🐰' },
+            { name: '龙', ele: '土', icon: '🐲' }, { name: '蛇', ele: '火', icon: '🐍' },
+            { name: '马', ele: '火', icon: '🐴' }, { name: '羊', ele: '土', icon: '🐏' },
+            { name: '猴', ele: '金', icon: '🐵' }, { name: '鸡', ele: '金', icon: '🐔' },
+            { name: '狗', ele: '土', icon: '🐶' }, { name: '猪', ele: '水', icon: '🐷' }
+          ];
+
+          const sheng = { '木': '火', '火': '土', '土': '金', '金': '水', '水': '木' };
+          const ke    = { '木': '土', '土': '水', '水': '火', '火': '金', '金': '木' };
+          const getMother = (c) => Object.keys(sheng).find(k => sheng[k] === c) || '土';
+
+          return ZODIAC_DATA.map((item, index) => {
+            const zEle = item.ele;
+            let luckyEle = '土';
+            let reason = '吉星高照';
+
+            if (sheng[dayEle] === zEle) { luckyEle = dayEle; reason = "得天时相助"; }
+            else if (dayEle === zEle) { luckyEle = zEle; reason = "五行同气旺"; }
+            else if (ke[dayEle] === zEle) { luckyEle = sheng[dayEle]; reason = "通关解压力"; }
+            else { luckyEle = getMother(zEle); reason = "生身补元气"; }
+
+            const variations = VARIATION_DB[luckyEle] || VARIATION_DB['土'];
+            const variationIndex = (index + new Date().getDate()) % variations.length;
+            const detailColor = variations[variationIndex];
+            const style = STYLE_MAP[luckyEle] || STYLE_MAP['土'];
+
+            return {
+              name: item.name, icon: item.icon,
+              mainColor: detailColor, reason: reason,
+              themeColor: style.hex, bgColor: style.bg
+            };
+          });
+        }
+      }
+    })
+  </script>
+</body>
+</html>
